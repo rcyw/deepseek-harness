@@ -168,6 +168,12 @@ export class ReactLoopAgent implements Agent {
     })()
   }
 
+  wake(): void {
+    if (!this.inbox.hasPending) return
+    const wakingAfterAbort = this.phase.kind !== 'idle' && this.phase.abort.signal.aborted
+    this.wakeDriver(wakingAfterAbort)
+  }
+
   /**
    * Start one driver, or latch its wake behind maintenance or an aborted
    * activity. A wake sent while idle always opens its turn boundary, even

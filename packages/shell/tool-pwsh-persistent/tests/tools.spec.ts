@@ -47,6 +47,7 @@ function agent(ctx: Context, cwd: string | undefined): Agent {
     steer: () => ({ outcome: Promise.resolve({ status: 'rejected' as const }) }),
     inject: () => {},
     cancel() {},
+    wake() {},
     runMaintenance: task => task(new AbortController().signal),
     whenIdle: () => Promise.resolve(),
   }

@@ -636,6 +636,51 @@ describe('the session-persistence Agent Note: AgentLoop factory create/resume', 
     await ctx1.fiber.dispose()
   })
 
+  it('wake() resumes a durably pending next-turn message without inserting a duplicate', async () => {
+    const sessionId = SessionId('pending-next-turn-resume')
+    const first = await persistentHarness(new MockAdapter([]))
+    const pending = createUserMessage({
+      content: [{ type: 'text', text: 'recover this exact task' }],
+      source: { kind: 'plugin', plugin: 'automation' },
+    })
+    await first.ctx.sessionPersistence.create({
+      version: SESSION_FORMAT_VERSION,
+      id: sessionId,
+      createdAt: 1,
+    })
+    await first.ctx.sessionPersistence.append(sessionId, [{
+      type: 'agent/inbox/spliced',
+      seq: 0,
+      time: 2,
+      data: { target: 'next-turn', start: 0, inserted: [pending] },
+    }])
+    await first.ctx.fiber.dispose()
+
+    const adapter = new MockAdapter([textResponse('recovered')])
+    const ctx = await mountPersistentHarness(first.root, adapter)
+    const handle = await ctx.agents.resume({
+      resumeSessionId: sessionId,
+      agentOptions: { provider: 'mock', model: 'mock' },
+    })
+    expect(handle.agent.inbox.nextTurn).toEqual([pending])
+
+    handle.agent.wake()
+    await handle.agent.whenIdle()
+
+    const inserted = handle.agent.session.events
+      .filter(event => event.type === 'agent/inbox/spliced')
+      .flatMap(event => event.type === 'agent/inbox/spliced' ? event.data.inserted : [])
+    expect(inserted).toEqual([pending])
+    expect(adapter.requests).toHaveLength(1)
+    expect(handle.agent.session.deriveMessages().filter(message => message.id === pending.id)).toEqual([pending])
+    expect(handle.agent.session.events.at(-1)).toMatchObject({
+      type: 'turn/end',
+      data: { reason: { kind: 'completed' } },
+    })
+    await handle.dispose()
+    await ctx.fiber.dispose()
+  })
+
   it('resume reloads a persisted session: history + turn numbering continue, no duplicate seqs', async () => {
     // Lifecycle 1: run one full turn, persisting it.
     const adapter1 = new MockAdapter([textResponse('first answer')])

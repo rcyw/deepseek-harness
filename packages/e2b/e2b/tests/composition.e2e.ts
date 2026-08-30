@@ -93,6 +93,7 @@ describe.skipIf(!process.env.E2B_API_KEY)('E2B live Loader composition', () => {
         steer() {},
         inject() {},
         cancel() {},
+        wake() {},
         runMaintenance: task => task(new AbortController().signal),
         whenIdle: () => Promise.resolve(),
       }

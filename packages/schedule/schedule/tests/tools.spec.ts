@@ -33,6 +33,7 @@ function stubAgent(ctx: Context, id: string): Agent {
     status: 'idle',
     ctx: new Context(),
     send(_message: UserMessage, _target: InboxTarget, _wakeup: boolean) {},
+    wake() {},
     runMaintenance: task => task(signal),
     cancel(_cause: AgentCancelCause) {},
     whenIdle: () => Promise.resolve(),

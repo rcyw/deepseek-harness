@@ -195,6 +195,7 @@ function stubAgent(cwd?: string, seed: SessionEvent[] = []): Agent {
     steer: () => {},
     inject: () => { throw new Error('agent-instructions must append directly to the open step') },
     cancel() {},
+    wake() {},
     runMaintenance: task => task(new AbortController().signal),
     whenIdle: () => Promise.resolve(),
   }

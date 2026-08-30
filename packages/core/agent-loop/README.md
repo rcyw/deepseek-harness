@@ -58,7 +58,7 @@ The generated [configuration catalog](../../../docs/config-catalog.md#deepseek-a
 
 ### Create or resume agents programmatically
 
-Plugins and hosts create agents through `ctx.agents.create()` and resume persisted sessions through `ctx.agents.resume()`; both return an `AgentHandle` whose `dispose()` owns exact teardown. The loop runs each created agent to completion — the handle is only needed when the caller must tear the agent down itself.
+Plugins and hosts create agents through `ctx.agents.create()` and resume persisted sessions through `ctx.agents.resume()`; both return an `AgentHandle` whose `dispose()` owns exact teardown. Resume reconstructs durable pending inbox input without starting a turn; a recovery owner calls `agent.wake()` to drive that input without adding another message. The loop runs each created agent to completion — the handle is only needed when the caller must tear the agent down itself.
 
 ```text
 const handle = await ctx.agents.create({

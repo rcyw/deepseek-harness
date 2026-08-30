@@ -66,6 +66,7 @@ async function harness(): Promise<RuntimeHarness> {
     status: 'idle',
     ctx: new Context(),
     send(_message: UserMessage, _target: InboxTarget, _wakeup: boolean) {},
+    wake() {},
     runMaintenance<T>(task: (signal: AbortSignal) => Promise<T>): Promise<T> {
       order.push('maintenance')
       if (!controls.canReserve) {

@@ -28,6 +28,7 @@ const owner: Agent = {
   steer() {},
   inject() {},
   cancel() {},
+  wake() {},
   runMaintenance: task => task(new AbortController().signal),
   whenIdle: () => Promise.resolve(),
 }

@@ -110,6 +110,14 @@ declare module './types.ts' {
     runMaintenance<T>(task: (signal: AbortSignal) => Promise<T>): Promise<T>
 
     /**
+   * Request driver work for messages already pending in the inbox without
+   * inserting another message. An empty inbox is a no-op. Pending work behind
+   * maintenance or active cancellation starts after that activity converges;
+   * a live driver already owns its pending work.
+   */
+    wake(): void
+
+    /**
    * Route identified input to an inbox boundary and optionally wake the driver.
    * Waking input submitted after active cancellation is queued for the next
    * turn and runs when the aborted activity converges to idle; a `disposed`

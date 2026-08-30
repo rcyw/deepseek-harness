@@ -43,6 +43,7 @@ function agent(ctx: Context): Agent {
     steer: () => {},
     inject: () => {},
     cancel() { status = 'idle' },
+    wake() {},
     runMaintenance: task => task(new AbortController().signal),
     whenIdle: () => Promise.resolve(),
   }

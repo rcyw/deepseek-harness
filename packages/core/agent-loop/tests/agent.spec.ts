@@ -39,6 +39,68 @@ describe('Agent', () => {
     await agent.whenIdle()
   })
 
+  it('wake() drives existing pending input without inserting another message', async () => {
+    const adapter = new MockAdapter([textResponse('ok')])
+    const ctx = await harness(adapter)
+    const agent = ctx.agentLoop.create(SessionId('wake-pending'), { provider: 'mock', model: 'mock' })
+    const pending = createUserMessage({
+      content: [{ type: 'text', text: 'persisted context' }],
+      source: { kind: 'plugin', plugin: 'recovery' },
+    })
+    agent.inject(pending)
+
+    agent.wake()
+    await agent.whenIdle()
+
+    const inserted = agent.session.events
+      .filter(event => event.type === 'agent/inbox/spliced')
+      .flatMap(event => event.type === 'agent/inbox/spliced' ? event.data.inserted : [])
+    expect(inserted).toEqual([pending])
+    expect(adapter.requests).toHaveLength(1)
+    expect(agent.session.deriveMessages()).toContainEqual(pending)
+  })
+
+  it('wake() is a no-op without pending input', async () => {
+    const adapter = new MockAdapter([])
+    const ctx = await harness(adapter)
+    const agent = ctx.agentLoop.create(SessionId('wake-empty'), { provider: 'mock', model: 'mock' })
+
+    agent.wake()
+    await agent.whenIdle()
+
+    expect(agent.status).toBe('idle')
+    expect(agent.session.events).toEqual([])
+    expect(adapter.requests).toEqual([])
+  })
+
+  it('wake() releases preserved pending input after active cancellation converges', async () => {
+    const adapter = new MockAdapter([textResponse('recovered')])
+    const ctx = await harness(adapter)
+    const agent = ctx.agentLoop.create(SessionId('wake-after-cancel'), { provider: 'mock', model: 'mock' })
+    const started = Promise.withResolvers<undefined>()
+    const maintenance = agent.runMaintenance(async (signal) => {
+      started.resolve(undefined)
+      await new Promise<void>((_resolve, reject) => {
+        signal.addEventListener('abort', () => { reject(new Error('maintenance cancelled')) }, { once: true })
+      })
+    })
+    await started.promise
+    expect(() => agent.runMaintenance(() => Promise.resolve())).toThrow('already has active work')
+
+    agent.cancel({ kind: 'user' }, { keepInbox: true })
+    const pending = createUserMessage({
+      content: [{ type: 'text', text: 'preserved after cancellation' }],
+      source: { kind: 'plugin', plugin: 'recovery' },
+    })
+    agent.inject(pending)
+    agent.wake()
+
+    await expect(maintenance).rejects.toThrow('maintenance cancelled')
+    await agent.whenIdle()
+    expect(adapter.requests).toHaveLength(1)
+    expect(agent.session.deriveMessages()).toContainEqual(pending)
+  })
+
   it('inject() preserves an explicitly empty plugin source', async () => {
     const ctx = await harness(new MockAdapter([textResponse('ok')]))
     const agent = ctx.agentLoop.create(SessionId('a1'), { provider: 'mock', model: 'mock' })
